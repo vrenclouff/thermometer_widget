@@ -11,6 +11,8 @@ public class ScpFrom{
 	
 //  public static void main(String[] arg){
 	static Session session = null;
+	OutputStream out = null;
+	InputStream in = null;
 	
   public ScpFrom(){
     
@@ -29,92 +31,99 @@ public class ScpFrom{
       session.setUserInfo(ui);
       session.connect();
 
-      // exec 'scp -f rfile' remotely
+
       String command="scp -f "+rfile;
       Channel channel=session.openChannel("exec");
       ((ChannelExec)channel).setCommand(command);
 
-      // get I/O streams for remote scp
-      OutputStream out=channel.getOutputStream();
-      InputStream in=channel.getInputStream();
+
+      out=channel.getOutputStream();
+      in=channel.getInputStream();
 
       channel.connect();
-
-      byte[] buf=new byte[1024];
+    }
+    catch(Exception e){
+      System.out.println(e);
+    }
+  }
+  
+  public String getData(){
+	  
+	  try{
+		  
+	  byte[] buf=new byte[1024];
 
       // send '\0'
       buf[0]=0;
       out.write(buf, 0, 1);
       out.flush();
+	  
+	  while(true){
+	    	int c=checkAck(in);
+	    	if(c!='C'){break;}
 
-      while(true){
-    	int c=checkAck(in);
-    	if(c!='C'){break;}
+	        // read '0644 '
+	        in.read(buf, 0, 5);
 
-        // read '0644 '
-        in.read(buf, 0, 5);
+	        long filesize=0L;
+	        
+	        while(true){
+	          if(in.read(buf, 0, 1)<0){break;}
+	          if(buf[0]==' '){break;}
+	          filesize=filesize*10L+(long)(buf[0]-'0');
+	        }
 
-        long filesize=0L;
-        
-        while(true){
-          if(in.read(buf, 0, 1)<0){break;}
-          if(buf[0]==' '){break;}
-          filesize=filesize*10L+(long)(buf[0]-'0');
-        }
+	        for(int i=0;;i++){
+	          in.read(buf, i, 1);
+	          if(buf[i]==(byte)0x0a){break;}
+	        }
 
-        for(int i=0;;i++){
-          in.read(buf, i, 1);
-          if(buf[i]==(byte)0x0a){break;}
-        }
-
-        // send '\0'
-        buf[0]=0;
-        out.write(buf, 0, 1);
-        out.flush();
-        
-        // read a content of lfile
-        int foo;
-        
-        while(true){
-          if(buf.length<filesize){ foo=buf.length;}
-          else{foo=(int)filesize;}
-          
-          foo=in.read(buf, 0, foo);
-   
-          if(foo<0){ break;}
-          
-          String s1 = new String(buf, 0, foo);
-          for(int i = 0; i < s1.length(); i++){
-        	  char c1 = s1.charAt(i);
-        	  if((c1 >= 'a' || c1 >= 'A') && (c1 <= 'z' || c1 <= 'Z')){
-        		  System.out.println(s1);
-        		  break;
-        	  }
-          }
-        	  
-          
-          filesize-=foo;
-          if(filesize==0L){break;}
-        }
-        
-        // ukonceni programu pri preneseni souboru
-        if(checkAck(in)!=0){
-        	System.exit(0);
-        }
-    	
-        // send '\0'
-    	buf[0]=0; 
-    	out.write(buf, 0, 1); 
-    	out.flush();
-    }
-      
-    //  session.disconnect();
-
-      System.exit(0);
-    }
-    catch(Exception e){
-      System.out.println(e);
-    }
+	        // send '\0'
+	        buf[0]=0;
+	        out.write(buf, 0, 1);
+	        out.flush();
+	        
+	        // read a content of lfile
+	        int foo;
+	        
+	        while(true){
+	          if(buf.length<filesize){ foo=buf.length;}
+	          else{foo=(int)filesize;}
+	          
+	          foo=in.read(buf, 0, foo);
+	   
+	          if(foo<0){ break;}
+	          
+	          String s1 = new String(buf, 0, foo);
+	          for(int i = 0; i < s1.length(); i++){
+	        	  char c1 = s1.charAt(i);
+	        	  if((c1 >= 'a' || c1 >= 'A') && (c1 <= 'z' || c1 <= 'Z')){
+	        		  return s1;
+	        	  }
+	          }
+	        	  
+	          
+	          filesize-=foo;
+	          if(filesize==0L){break;}
+	        }
+	        
+	        // ukonceni programu pri preneseni souboru
+	        if(checkAck(in)!=0){ break;}
+	    	
+	        // send '\0'
+	    	buf[0]=0; 
+	    	out.write(buf, 0, 1); 
+	    	out.flush();
+	  }
+	}catch(Exception e){
+	   System.out.println(e);
+	}
+	  
+	return null; 
+  }
+  
+  public void disconnect(){
+	  session.disconnect();
   }
 
   static int checkAck(InputStream in) throws IOException{

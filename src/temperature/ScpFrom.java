@@ -1,46 +1,26 @@
 package temperature;
 
 
-/* -*-mode:java; c-basic-offset:2; indent-tabs-mode:nil -*- */
-/**
- * This program will demonstrate the file transfer from remote to local
- *   $ CLASSPATH=.:../build javac ScpFrom.java
- *   $ CLASSPATH=.:../build java ScpFrom user@remotehost:file1 file2
- * You will be asked passwd. 
- * If everything works fine, a file 'file1' on 'remotehost' will copied to
- * local 'file1'.
- *
- */
 import com.jcraft.jsch.*;
 import java.awt.*;
 import javax.swing.*;
 import java.io.*;
 
-public class ScpFrom{
-  public static void main(String[] arg){
-    if(arg.length!=2){
-      System.err.println("usage: java ScpFrom user@remotehost:file1 file2");
-      System.exit(-1);
-    }      
 
-    FileOutputStream fos=null;
+public class ScpFrom{
+	
+//  public static void main(String[] arg){
+	static Session session = null;
+	
+  public ScpFrom(){
+    
     try{
 
-      String user=arg[0].substring(0, arg[0].indexOf('@'));		// pi
-      arg[0]=arg[0].substring(arg[0].indexOf('@')+1);
-      String host=arg[0].substring(0, arg[0].indexOf(':'));		// 10.109.23.91
-      String rfile=arg[0].substring(arg[0].indexOf(':')+1);		// /sys/bus/w1/devices/28-00000609dbe0/w1_slave
-      String lfile=arg[1];										// /home/lukas_cerny/teplota.txt
       int port = 22;
-      
-  //    System.out.print(user+"   "+host+"    "+rfile+"    "+lfile);
-  //    System.exit(0);
-
-      String prefix=null;
-      if(new File(lfile).isDirectory()){
-        prefix=lfile+File.separator;
-      }
-
+      String user="pi";
+      String host="10.109.23.91";
+      String rfile="/sys/bus/w1/devices/28-00000609dbe0/w1_slave";
+            
       JSch jsch=new JSch();
       Session session=jsch.getSession(user, host, port);
 
@@ -63,74 +43,77 @@ public class ScpFrom{
       byte[] buf=new byte[1024];
 
       // send '\0'
-      buf[0]=0; out.write(buf, 0, 1); out.flush();
+      buf[0]=0;
+      out.write(buf, 0, 1);
+      out.flush();
 
       while(true){
-	int c=checkAck(in);
-        if(c!='C'){
-	  break;
-	}
+    	int c=checkAck(in);
+    	if(c!='C'){break;}
 
         // read '0644 '
         in.read(buf, 0, 5);
 
         long filesize=0L;
+        
         while(true){
-          if(in.read(buf, 0, 1)<0){
-            // error
-            break; 
-          }
-          if(buf[0]==' ')break;
+          if(in.read(buf, 0, 1)<0){break;}
+          if(buf[0]==' '){break;}
           filesize=filesize*10L+(long)(buf[0]-'0');
         }
 
-        String file=null;
         for(int i=0;;i++){
           in.read(buf, i, 1);
-          if(buf[i]==(byte)0x0a){
-            file=new String(buf, 0, i);
-            break;
-  	  }
+          if(buf[i]==(byte)0x0a){break;}
         }
 
-	//System.out.println("filesize="+filesize+", file="+file);
-
         // send '\0'
-        buf[0]=0; out.write(buf, 0, 1); out.flush();
-
+        buf[0]=0;
+        out.write(buf, 0, 1);
+        out.flush();
+        
         // read a content of lfile
-        fos=new FileOutputStream(prefix==null ? lfile : prefix+file);
         int foo;
+        
         while(true){
-          if(buf.length<filesize) foo=buf.length;
-	  else foo=(int)filesize;
+          if(buf.length<filesize){ foo=buf.length;}
+          else{foo=(int)filesize;}
+          
           foo=in.read(buf, 0, foo);
-          if(foo<0){
-            // error 
-            break;
+   
+          if(foo<0){ break;}
+          
+          String s1 = new String(buf, 0, foo);
+          for(int i = 0; i < s1.length(); i++){
+        	  char c1 = s1.charAt(i);
+        	  if((c1 >= 'a' || c1 >= 'A') && (c1 <= 'z' || c1 <= 'Z')){
+        		  System.out.println(s1);
+        		  break;
+        	  }
           }
-          fos.write(buf, 0, foo);
+        	  
+          
           filesize-=foo;
-          if(filesize==0L) break;
+          if(filesize==0L){break;}
         }
-        fos.close();
-        fos=null;
-
-	if(checkAck(in)!=0){
-	  System.exit(0);
-	}
-
+        
+        // ukonceni programu pri preneseni souboru
+        if(checkAck(in)!=0){
+        	System.exit(0);
+        }
+    	
         // send '\0'
-        buf[0]=0; out.write(buf, 0, 1); out.flush();
-      }
-
-      session.disconnect();
+    	buf[0]=0; 
+    	out.write(buf, 0, 1); 
+    	out.flush();
+    }
+      
+    //  session.disconnect();
 
       System.exit(0);
     }
     catch(Exception e){
       System.out.println(e);
-      try{if(fos!=null)fos.close();}catch(Exception ee){}
     }
   }
 
@@ -152,35 +135,26 @@ public class ScpFrom{
       }
       while(c!='\n');
       if(b==1){ // error
-	System.out.print(sb.toString());
+//	System.out.print(sb.toString());
       }
       if(b==2){ // fatal error
-	System.out.print(sb.toString());
+//	System.out.print(sb.toString());
       }
     }
     return b;
   }
 
   public static class MyUserInfo implements UserInfo, UIKeyboardInteractive{
-	  
+	String passwd = "raspberry";  
+	
     public String getPassword(){
     	return passwd; 
     }
     
     public boolean promptYesNo(String str){
-      Object[] options={ "yes", "no" };
-      int foo=JOptionPane.showOptionDialog(null, 
-             str,
-             "Warning", 
-             JOptionPane.DEFAULT_OPTION, 
-             JOptionPane.WARNING_MESSAGE,
-             null, options, options[0]);
-       return foo==0;
-    }
+        return true;
+      }
   
-    String passwd;
-    JTextField passwordField=(JTextField)new JPasswordField(20);
-
     public String getPassphrase(){ 
     	return null; 
     }
@@ -190,17 +164,8 @@ public class ScpFrom{
     }
     
     public boolean promptPassword(String message){
-      Object[] ob={passwordField}; 
-      int result= JOptionPane.showConfirmDialog(null, ob, message, JOptionPane.OK_CANCEL_OPTION);
-      
-      if(result==JOptionPane.OK_OPTION){
-    	  passwd=passwordField.getText();
-    	  return true;
+        return true;
       }
-      else{
-    	  return false; 
-      }
-    }
     
     
     public void showMessage(String message){

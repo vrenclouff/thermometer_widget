@@ -9,7 +9,13 @@ import java.io.*;
 
 public class ScpFrom{
 	
-//  public static void main(String[] arg){
+	
+    final String user="pi";
+    final static String password = "raspberry";
+    final String host="10.109.23.91";
+    final int port = 22;
+    final String rfile="/sys/bus/w1/devices/28-00000609dbe0/w1_slave";
+    	
 	static Session session = null;
 	OutputStream out = null;
 	InputStream in = null;
@@ -17,16 +23,10 @@ public class ScpFrom{
   public ScpFrom(){
     
     try{
-
-      int port = 22;
-      String user="pi";
-      String host="10.109.23.91";
-      String rfile="/sys/bus/w1/devices/28-00000609dbe0/w1_slave";
             
       JSch jsch=new JSch();
       Session session=jsch.getSession(user, host, port);
 
-      // username and password will be given via UserInfo interface.
       UserInfo ui=new MyUserInfo();
       session.setUserInfo(ui);
       session.connect();
@@ -154,7 +154,7 @@ public class ScpFrom{
   }
 
   public static class MyUserInfo implements UserInfo, UIKeyboardInteractive{
-	String passwd = "raspberry";  
+	String passwd = ScpFrom.password;
 	
     public String getPassword(){
     	return passwd; 

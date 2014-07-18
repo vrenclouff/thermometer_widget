@@ -38,6 +38,10 @@ public class Main {
 		String data = ssh.getData();
 		String temperature = mn.celsius(data);
 		
+		Canvas cvs = new Canvas();
+		cvs.run();
+		cvs.repaint();
+		
 		System.out.println(temperature+" °C");
 
 	}

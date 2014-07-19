@@ -47,8 +47,9 @@ public class ScpFrom{
     }
   }
   
+  
   public String getData(){
-	  
+	  	  
 	  try{
 		  
 	  byte[] buf=new byte[1024];
@@ -122,9 +123,9 @@ public class ScpFrom{
 	return null; 
   }
   
-  public void disconnect(){
-	  session.disconnect();
-  }
+//  public void disconnect(){
+//	  session.disconnect();
+//  }
 
   static int checkAck(InputStream in) throws IOException{
     int b=in.read();

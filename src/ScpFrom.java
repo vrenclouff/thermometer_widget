@@ -1,4 +1,4 @@
-package temperature;
+
 
 
 import com.jcraft.jsch.*;

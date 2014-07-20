@@ -19,6 +19,8 @@ public class ScpFrom{
 	OutputStream out = null;
 	InputStream in = null;
 	Channel channel = null;
+	UserInfo ui = null;
+	JSch jsch = null;
 	
   public ScpFrom(){
     
@@ -27,9 +29,11 @@ public class ScpFrom{
       JSch jsch=new JSch();
       session=jsch.getSession(user, host, port);
 
-      UserInfo ui=new MyUserInfo();
+      ui=new MyUserInfo();
       session.setUserInfo(ui);
       session.connect();
+      
+      
       	  	  
     }
     catch(Exception e){

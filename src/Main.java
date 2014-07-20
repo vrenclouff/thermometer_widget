@@ -3,6 +3,7 @@
 import java.util.Timer;
 import java.util.TimerTask;
 
+import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 
 
@@ -17,7 +18,14 @@ public class Main {
     
     final static String file_out="";
     final static String command_outside="scp -f "+file_out;
-	
+    
+    static String inside = "null";
+    static String outside = "null";
+    static boolean conn = false;
+    static boolean conn_in = false;
+    static boolean conn_out = false;
+    static int counter = 0;
+    
 	private static String parseData(String data){
 		String [] parts = data.split(" ");
 		String temperatur = null;
@@ -32,12 +40,12 @@ public class Main {
 	
 	private static String celsius(String data){
 		
-		if(data == null){ return "null";}
+		if(data == null){ return null;}
 		
 		String tmp = parseData(data);
 		double temper = 0.0;
 		
-		if(tmp == null){ return "null";} // return null (error)
+		if(tmp == null){ return null;}
 
 		String [] parts = tmp.split("=");
 		temper = Double.parseDouble(parts[1]);
@@ -45,27 +53,64 @@ public class Main {
 		temper = (double)Math.round(temper)/10;
 		tmp = String.valueOf(temper);
 
-		return tmp;	// return temperature
+		return tmp;
 	}
 	
 	private void run(){
 		ssh = new ScpFrom();
 		cvs = new Canvas();
 		cvs.run();
+		
+		conn = ssh.session.isConnected();
+	}
+	
+	static void checkSession(){
+		counter++;
+		
+		if(!ssh.session.isConnected() || counter == 10){
+			conn = false;
+			System.out.println("disconnect");
+			try { 
+				ssh.jsch = new JSch();
+				ssh.session=ssh.jsch.getSession(ssh.user, ssh.host, ssh.port);
+				ssh.session.setUserInfo(ssh.ui);
+				ssh.session.connect();
+				ssh.channel = ssh.session.openChannel("exec");
+			} 
+			catch (JSchException e) { e.printStackTrace();}
+			
+			if(ssh.session.isConnected()){
+				counter = 0;
+				conn = true;
+				System.out.println("connect again");
+			}
+		}else{
+		//	System.out.println("connect");
+		}
 	}
 	
 	public static void time(){
-		
-		if(!ssh.session.isConnected()){
-			try { ssh.session.connect();} 
-			catch (JSchException e) { e.printStackTrace();}
-		}
-		
+		checkSession();
+				
 		String data_in = ssh.getData(command_inside);
 		String data_out = ssh.getData(command_outside);
-				
-		String inside = celsius(data_in);
-		String outside = celsius(data_out);
+
+		String in = celsius(data_in);
+		String out = celsius(data_out);
+
+		if(in != null){ 
+			inside = in; 
+			conn_in = true;
+		}else{
+			conn_in = false;
+		}
+		
+		if(out != null){
+			outside = out;
+			conn_out = true;
+		}else{
+			conn_out = false;
+		}
 		
 		Widget.setInside(inside);
 		Widget.setOutside(outside);

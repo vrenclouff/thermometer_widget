@@ -67,8 +67,12 @@ public class Main {
 	static void checkSession(){
 		counter++;
 		
-		if(!ssh.session.isConnected() || counter == 10){
+		if(!ssh.session.isConnected() || counter == 9){
+			
+			ssh.session.disconnect();
+			ssh.session = null;
 			conn = false;
+			
 			System.out.println("disconnect");
 			try { 
 				ssh.jsch = new JSch();
@@ -85,7 +89,7 @@ public class Main {
 				System.out.println("connect again");
 			}
 		}else{
-		//	System.out.println("connect");
+			System.out.println("connect - "+counter);
 		}
 	}
 	
